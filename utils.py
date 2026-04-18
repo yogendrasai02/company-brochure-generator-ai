@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 import os
 import json
+from litellm import completion_cost
 
 def get_openai_api_key():
   """
@@ -18,45 +19,55 @@ def construct_llm_messages(system_msg: str, user_msg: str):
     {"role": "user", "content": user_msg}
   ]
 
+def log_llm_token_cost_usage(response):
+    """Log token usage and cost from a normal (non-streamed) LiteLLM response."""
 
-def log_llm_token_cost_usage(completion_result: dict):
-  """Log detailed token and cost usage from a litellm completion result."""
-  try:
-    usage = completion_result.get("usage", {})
-    if not usage:
-      print("No token usage information available in the completion result.")
-      return
+    u = response.usage
 
-    # Handle different token field names across providers
-    input_tokens = usage.get("input_tokens") or usage.get("prompt_tokens")
-    output_tokens = usage.get("output_tokens") or usage.get("completion_tokens")
-    total_tokens = usage.get("total_tokens")
+    input_tokens     = getattr(u, "prompt_tokens",     "N/A")
+    output_tokens    = getattr(u, "completion_tokens", "N/A")
+    total_tokens     = getattr(u, "total_tokens",      "N/A")
+    reasoning_tokens = getattr(u.completion_tokens_details, "reasoning_tokens", "N/A") if u.completion_tokens_details else "N/A"
 
-    # Reasoning tokens may be nested in completion_tokens_details (Pydantic object)
-    reasoning_tokens = (
-        usage.get("reasoning_tokens") or
-        usage.get("intermediate_tokens")
-    )
-    if reasoning_tokens is None and hasattr(usage, "completion_tokens_details"):
-      try:
-        reasoning_tokens = getattr(usage.completion_tokens_details, "reasoning_tokens", None)
-      except AttributeError:
-        pass
+    try:
+        cost = f"${completion_cost(completion_response=response):.6f}"
+    except Exception:
+        cost = "N/A"
 
-    print("LLM Token Usage:")
-    print(f"  input_tokens: {input_tokens}")
-    print(f"  reasoning_tokens: {reasoning_tokens}")
-    print(f"  output_tokens: {output_tokens}")
-    print(f"  total_tokens: {total_tokens}")
+    print("=" * 40)
+    print(" " * 15, "Token Usage & Cost")
+    print(f"Input tokens    : {input_tokens}")
+    print(f"Output tokens   : {output_tokens}")
+    print(f"Reasoning tokens: {reasoning_tokens}")
+    print(f"Total tokens    : {total_tokens}")
+    print(f"Cost            : {cost}")
+    print("=" * 40)
 
-    # Cost from _hidden_params (LiteLLM standard)
-    hidden_params = completion_result.get("_hidden_params", {})
-    response_cost = hidden_params.get("response_cost")
 
-    if response_cost is not None:
-      print(f"LLM Cost: ${response_cost:.6f}")
-    else:
-      print("LLM Cost: Not available in the response.")
-  except Exception as e:
-    print(f"Error logging token and cost usage: {e}")
-    print("Continuing without logging usage details.")
+def log_usage_streamed(final_chunk):
+    """Log token usage and cost from the final chunk of a streamed LiteLLM response."""
+
+    u = getattr(final_chunk, "usage", None)
+
+    if u is None:
+        print("No usage data found. Ensure stream_options={'include_usage': True} is set.")
+        return
+
+    input_tokens     = getattr(u, "prompt_tokens",     "N/A")
+    output_tokens    = getattr(u, "completion_tokens", "N/A")
+    total_tokens     = getattr(u, "total_tokens",      "N/A")
+    reasoning_tokens = getattr(u.completion_tokens_details, "reasoning_tokens", "N/A") if u.completion_tokens_details else "N/A"
+
+    try:
+        cost = f"${completion_cost(completion_response=final_chunk):.6f}"
+    except Exception:
+        cost = "N/A"
+
+    print("=" * 40)
+    print(" " * 15, "Token Usage & Cost")
+    print(f"Input tokens    : {input_tokens}")
+    print(f"Output tokens   : {output_tokens}")
+    print(f"Reasoning tokens: {reasoning_tokens}")
+    print(f"Total tokens    : {total_tokens}")
+    print(f"Cost            : {cost}")
+    print("=" * 40)
