@@ -44,7 +44,7 @@ def log_llm_token_cost_usage(response):
     print("=" * 40)
 
 
-def log_usage_streamed(final_chunk):
+def log_llm_token_cost_usage_streamed(final_chunk):
     """Log token usage and cost from the final chunk of a streamed LiteLLM response."""
 
     u = getattr(final_chunk, "usage", None)
