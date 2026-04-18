@@ -1,7 +1,7 @@
 import json
 from litellm import completion
 from website_scraper import fetch_website_links, generate_website_content_context
-from utils import construct_llm_messages, log_llm_token_cost_usage
+from utils import construct_llm_messages, log_llm_token_cost_usage, log_llm_token_cost_usage_streamed
 
 def filter_relevant_links_from_llm(website_name: str, website_url: str, llm_api_key: str, llm_model: str):
   """
@@ -60,7 +60,7 @@ def filter_relevant_links_from_llm(website_name: str, website_url: str, llm_api_
 
 def generate_brochure_from_llm(website_name: str, relevant_links: dict, llm_api_key: str, llm_model: str):
   brochure_gen_system_prompt = """
-  You are an digital marketing expert in creating engaging & energetic short brochures for companies (for prospective clients, investors, recruits, etc.) based on information in relavant pages of the company's website.
+  You are a digital marketing expert in creating engaging & energetic short brochures for companies (for prospective clients, investors, recruits, etc.) based on information in relavant pages of the company's website.
 
   Create the brochure and respond in Markdown format.
 
@@ -80,15 +80,25 @@ def generate_brochure_from_llm(website_name: str, relevant_links: dict, llm_api_
   {company_context}
   """
 
-  print("Preparing LLM call to generate brochure for website:", website_name)
+  print("Preparing LLM call (with streaming) to generate brochure for website:", website_name)
 
-  response = completion(
+  stream = completion(
     api_key=llm_api_key,
     model=llm_model,
-    messages=construct_llm_messages(brochure_gen_system_prompt, company_context)
+    messages=construct_llm_messages(brochure_gen_system_prompt, user_prompt),
+    stream=True,
   )
 
-  print("Done with LLM call to generate brochure for website:", website_name)
-  log_llm_token_cost_usage(response)
+  response_accumulator = ""
+  final_chunk = None
+  for chunk in stream:
+    final_chunk = chunk
+    delta = chunk.choices[0].delta.content if chunk.choices else None
+    if delta:
+      response_accumulator += delta
+      yield response_accumulator
 
-  print(response.choices[0].message.content)
+  print("Done with LLM call (with streaming) to generate brochure for website:", website_name)
+  log_llm_token_cost_usage_streamed(final_chunk=final_chunk)
+
+  yield response_accumulator
