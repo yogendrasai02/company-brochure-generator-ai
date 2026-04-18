@@ -35,7 +35,8 @@ def log_llm_token_cost_usage(response):
         cost = "N/A"
 
     print("=" * 40)
-    print(" " * 15, "Token Usage & Cost")
+    print(" " * 10, "TOKEN USAGE & COST")
+    print("=" * 40)
     print(f"Input tokens    : {input_tokens}")
     print(f"Output tokens   : {output_tokens}")
     print(f"Reasoning tokens: {reasoning_tokens}")
@@ -64,7 +65,8 @@ def log_llm_token_cost_usage_streamed(final_chunk):
         cost = "N/A"
 
     print("=" * 40)
-    print(" " * 15, "Token Usage & Cost")
+    print(" " * 10, "TOKEN USAGE & COST")
+    print("=" * 40)
     print(f"Input tokens    : {input_tokens}")
     print(f"Output tokens   : {output_tokens}")
     print(f"Reasoning tokens: {reasoning_tokens}")
