@@ -6,9 +6,10 @@ def get_openai_api_key():
   """
   Returns the OpenAI API key from the environment variable.
   """
+  load_dotenv()
   OPENAI_API_KEY = os.getenv("OPENAI_TUTORIALS_API_KEY")
-  if not "sk-proj" in OPENAI_API_KEY:
-    raise ValueError("Please set your OpenAI API key in the .env file")
+  if not OPENAI_API_KEY or "sk-proj" not in OPENAI_API_KEY:
+    raise ValueError("Please set your OpenAI API key in the .env file or environment variable OPENAI_TUTORIALS_API_KEY")
   return OPENAI_API_KEY
 
 def construct_llm_messages(system_msg: str, user_msg: str):
